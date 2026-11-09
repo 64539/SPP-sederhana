@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum Role {
+  ADMIN
+  PETUGAS
+  SISWA
+}
+
+model Akun {
+  id                  Int          @id @default(autoincrement())
+  username            String       @unique
+  password            String
+  namaLengkap         String
+  role                Role         @default(PETUGAS)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  siswa               Siswa?
+  pembayaranProcessed Pembayaran[] @relation("PetugasPembayaran")
+}
+
+model Kelas {
+  id        Int      @id @default(autoincrement())
+  namaKelas String   @unique // contoh: "XII RPL 1", "X TKJ 2"
+  siswa     Siswa[]
+  createdAt DateTime @default(now())
+}
+
+model Jurusan {
+  id          Int      @id @default(autoincrement())
+  namaJurusan String   @unique // contoh: "Rekayasa Perangkat Lunak", "Teknik Komputer & Jaringan"
+  siswa       Siswa[]
+  createdAt   DateTime @default(now())
+}
+
+model Spp {
+  id         Int          @id @default(autoincrement())
+  tahun      Int // Tahun SPP, contoh: 2024
+  nominal    Int // Nominal tarif bulanan, contoh: 250000
+  siswa      Siswa[]
+  pembayaran Pembayaran[]
+  createdAt  DateTime     @default(now())
+}
+
+model Siswa {
+  id         Int          @id @default(autoincrement())
+  nisn       String       @unique // Nomor Induk Siswa Nasional (10 digit)
+  nis        String       @unique // Nomor Induk Siswa lokal
+  nama       String
+  alamat     String?
+  noTelp     String?
+  akunId     Int          @unique
+  akun       Akun         @relation(fields: [akunId], references: [id], onDelete: Cascade)
+  kelasId    Int
+  kelas      Kelas        @relation(fields: [kelasId], references: [id])
+  jurusanId  Int
+  jurusan    Jurusan      @relation(fields: [jurusanId], references: [id])
+  sppId      Int?
+  spp        Spp?         @relation(fields: [sppId], references: [id])
+  pembayaran Pembayaran[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Pembayaran {
+  id           Int      @id @default(autoincrement())
+  siswaId      Int
+  siswa        Siswa    @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  bulanDibayar String // "Januari", "Februari", dst
+  tahunDibayar String // "2024", "2025"
+  sppId        Int
+  spp          Spp      @relation(fields: [sppId], references: [id])
+  nominal      Int // Jumlah dibayar
+  petugasId    Int // ID Akun admin/petugas yang mengentri
+  petugas      Akun     @relation("PetugasPembayaran", fields: [petugasId], references: [id])
+  tanggalBayar DateTime @default(now())
+  keterangan   String?  @default("Lunas")
+  createdAt    DateTime @default(now())
+}
